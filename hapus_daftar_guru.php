@@ -2,26 +2,18 @@
 session_start();
 include("config.php");
 
-// 🔒 Proteksi agar hanya admin yang bisa menghapus
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header("Location: login.php");
+// Periksa apakah yang login adalah admin
+if (!isset($_SESSION['login_user']) || !isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
+    header("location: login.php");
     exit();
 }
 
-// 🗑️ Hapus data guru berdasarkan ID (gunakan query aman)
-if (isset($_GET['id']) && is_numeric($_GET['id'])) {
-    $id = (int) $_GET['id'];
-
-    // Gunakan pg_query_params agar aman dari SQL Injection
-    $query = "DELETE FROM daftar WHERE id = $1";
-    $result = pg_query_params($conn, $query, [$id]);
-
-    if (!$result) {
-        die("Gagal menghapus data: " . pg_last_error($conn));
-    }
+if (isset($_GET['id'])) {
+    $id = $_GET['id'];
+    $query = "DELETE FROM daftar WHERE id = $id";
+    mysqli_query($conn, $query);
 }
 
-// ✅ Arahkan kembali ke halaman daftar guru
-header("Location: daftar_guru.php");
-exit();
+// Setelah menghapus data, Anda bisa mengarahkan pengguna kembali ke halaman admin
+header("location: daftar_guru.php");
 ?>
