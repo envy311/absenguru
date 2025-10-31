@@ -2,8 +2,8 @@
 session_start();
 include("config.php");
 
-// 🔒 Proteksi akses halaman
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true || $_SESSION['role'] !== 'admin') {
+// Proteksi akses halaman
+if (!isset($_SESSION['login_user']) || !isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     header("Location: login.php");
     exit();
 }
@@ -11,39 +11,42 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 $error = "";
 $success = "";
 
-// 🧩 Proses tambah & edit data
+// Proses tambah & edit data
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $nama = trim($_POST['nama']);
-    $nip = trim($_POST['nip']);
-    $jenis_kelamin = trim($_POST['jenis_kelamin']);
-    $mata_pelajaran = trim($_POST['mata_pelajaran']);
+    // Amankan input
+    $nama = mysqli_real_escape_string($conn, trim($_POST['nama']));
+    $nip = mysqli_real_escape_string($conn, trim($_POST['nip']));
+    $jenis_kelamin = mysqli_real_escape_string($conn, trim($_POST['jenis_kelamin']));
+    $mata_pelajaran = mysqli_real_escape_string($conn, trim($_POST['mata_pelajaran']));
 
     if (isset($_POST['edit_id']) && !empty($_POST['edit_id'])) {
-        // ✅ Update data guru
+        //  Update data guru
         $id = (int) $_POST['edit_id'];
         $query = "UPDATE daftar 
-                  SET nama = $1, nip = $2, jenis_kelamin = $3, mata_pelajaran = $4 
-                  WHERE id = $5";
-        $result = pg_query_params($conn, $query, [$nama, $nip, $jenis_kelamin, $mata_pelajaran, $id]);
-        if ($result) {
+                  SET nama='$nama', 
+                      nip='$nip', 
+                      jenis_kelamin='$jenis_kelamin', 
+                      mata_pelajaran='$mata_pelajaran' 
+                  WHERE id=$id";
+        if (mysqli_query($conn, $query)) {
             $success = "Data guru berhasil diperbarui.";
         } else {
-            $error = "Gagal memperbarui data guru: " . pg_last_error($conn);
+            $error = "Gagal memperbarui data guru: " . mysqli_error($conn);
         }
     } else {
-        // ✅ Tambah data baru
-        $query = "INSERT INTO daftar (nama, nip, jenis_kelamin, mata_pelajaran) VALUES ($1, $2, $3, $4)";
-        $result = pg_query_params($conn, $query, [$nama, $nip, $jenis_kelamin, $mata_pelajaran]);
-        if ($result) {
+        //  Tambah data baru
+        $query = "INSERT INTO daftar (nama, nip, jenis_kelamin, mata_pelajaran) 
+                  VALUES ('$nama', '$nip', '$jenis_kelamin', '$mata_pelajaran')";
+        if (mysqli_query($conn, $query)) {
             $success = "Data guru berhasil disimpan.";
         } else {
-            $error = "Gagal menyimpan data guru: " . pg_last_error($conn);
+            $error = "Gagal menyimpan data guru: " . mysqli_error($conn);
         }
     }
 }
 
-// 🧾 Ambil semua data guru urut dari ID terkecil ke terbesar
-$result = pg_query($conn, "SELECT * FROM daftar ORDER BY id ASC");
+// Ambil semua data guru urut dari ID terkecil ke terbesar
+$result = mysqli_query($conn, "SELECT * FROM daftar ORDER BY id ASC");
 ?>
 
 <!DOCTYPE html>
@@ -57,15 +60,15 @@ $result = pg_query($conn, "SELECT * FROM daftar ORDER BY id ASC");
 
 <body class="flex bg-gray-50 min-h-screen">
     <!-- Sidebar -->
-    <div class="w-64 bg-white text-gray-800 min-h-screen shadow-lg">
+    <div class="w-64 bg-cyan-400 text-gray-800 min-h-screen shadow-lg">
         <div class="p-6">
             <img src="logo.png" alt="SDK Logo" class="w-12 h-12 mb-4">
             <h2 class="text-lg font-semibold mb-6 text-gray-900">SDK FRATERAN 2 KEDIRI</h2>
             <ul class="space-y-1">
-                <li><a href="admin.php" class="block py-3 px-4 text-gray-700 hover:bg-gray-100 rounded-md">Dashboard</a></li>
-                <li><a href="rekap_bulanan.php" class="block py-3 px-4 text-gray-700 hover:bg-gray-100 rounded-md">Rekap Bulanan</a></li>
-                <li><a href="daftar_guru.php" class="block py-3 px-4 bg-gray-100 text-gray-900 rounded-md font-semibold">Daftar Guru</a></li>
-                <li><a href="logout.php" class="block py-3 px-4 text-gray-700 hover:bg-gray-100 rounded-md">Logout</a></li>
+                <li><a href="admin.php" class="block py-3 px-4 bg-cyan-400 hover:bg-cyan-500 text-gray-900 font-medium rounded-lg">Dashboard</a></li>
+                <li><a href="rekap_bulanan.php" class="block py-3 px-4 bg-cyan-400 hover:bg-cyan-500 text-gray-900 font-medium rounded-lg">Rekap Bulanan</a></li>
+                <li><a href="daftar_guru.php" class="block py-3 px-4 bg-cyan-400 hover:bg-cyan-500 text-gray-900 font-medium rounded-lg">Daftar Guru</a></li>
+                <li><a href="logout.php" class="block py-3 px-4 bg-cyan-400 hover:bg-cyan-500 text-gray-900 font-medium rounded-lg">Logout</a></li>
             </ul>
         </div>
     </div>
@@ -74,7 +77,7 @@ $result = pg_query($conn, "SELECT * FROM daftar ORDER BY id ASC");
     <div class="flex-1 p-8">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-2xl font-semibold text-gray-900">Data Daftar Guru</h3>
-            <button onclick="openInputModal()" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition">Tambah Data Guru</button>
+            <button onclick="openInputModal()" class="bg-cyan-400 hover:bg-cyan-600 text-white px-4 py-2 rounded-md transition">Tambah Data Guru</button>
         </div>
 
         <!-- Notifikasi -->
@@ -87,7 +90,7 @@ $result = pg_query($conn, "SELECT * FROM daftar ORDER BY id ASC");
         <!-- Tabel Data -->
         <div class="bg-white shadow-sm rounded-lg overflow-hidden">
             <table class="w-full text-sm text-gray-700">
-                <thead class="bg-gray-800 text-white">
+                <thead class="bg-cyan-400 text-white">
                     <tr>
                         <th class="px-4 py-3">ID</th>
                         <th class="px-4 py-3">Nama</th>
@@ -98,13 +101,13 @@ $result = pg_query($conn, "SELECT * FROM daftar ORDER BY id ASC");
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (pg_num_rows($result) > 0): ?>
-                        <?php while ($row = pg_fetch_assoc($result)): ?>
+                    <?php if (mysqli_num_rows($result) > 0): ?>
+                        <?php while ($row = mysqli_fetch_assoc($result)): ?>
                             <tr class="border-b hover:bg-gray-50">
                                 <td class="px-4 py-3"><?= htmlspecialchars($row['id']) ?></td>
                                 <td class="px-4 py-3"><?= htmlspecialchars($row['nama']) ?></td>
-                                <td class="px-4 py-3"><?= htmlspecialchars($row['nip']) ?></td>
-                                <td class="px-4 py-3"><?= htmlspecialchars($row['jenis_kelamin']) ?></td>
+                                <td class="px-4 py-3"><?= htmlspecialchars($row['NIP']) ?></td>
+                                <td class="px-4 py-3"><?= htmlspecialchars($row['Jenis_Kelamin']) ?></td>
                                 <td class="px-4 py-3"><?= htmlspecialchars($row['mata_pelajaran']) ?></td>
                                 <td class="px-4 py-3 space-x-2">
                                     <button onclick='openEditModal(<?= json_encode($row) ?>)' class='bg-yellow-500 hover:bg-yellow-400 text-white px-3 py-1 rounded-md'>Edit</button>
@@ -146,8 +149,8 @@ $result = pg_query($conn, "SELECT * FROM daftar ORDER BY id ASC");
                     <input type="text" name="mata_pelajaran" class="w-full border rounded-md px-3 py-2" required>
                 </div>
                 <div class="flex justify-end space-x-2 mt-4">
-                    <button type="button" onclick="closeInputModal()" class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-md">Batal</button>
-                    <button type="submit" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md">Simpan</button>
+                    <button type="button" onclick="closeInputModal()" class="bg-cyan-400 hover:bg-cyan-600 text-white px-4 py-2 rounded-md">Batal</button>
+                    <button type="submit" class="bg-cyan-400 hover:bg-cyan-600 text-white px-4 py-2 rounded-md">Simpan</button>
                 </div>
             </form>
         </div>
@@ -180,8 +183,8 @@ $result = pg_query($conn, "SELECT * FROM daftar ORDER BY id ASC");
                     <input type="text" id="edit_mapel" name="mata_pelajaran" class="w-full border rounded-md px-3 py-2" required>
                 </div>
                 <div class="flex justify-end space-x-2 mt-4">
-                    <button type="button" onclick="closeEditModal()" class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-md">Batal</button>
-                    <button type="submit" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md">Update</button>
+                    <button type="button" onclick="closeEditModal()" class="bg-cyan-400 hover:bg-cyan-600 text-white px-4 py-2 rounded-md">Batal</button>
+                    <button type="submit" class="bg-cyan-400 hover:bg-cyan-600 text-white px-4 py-2 rounded-md">Update</button>
                 </div>
             </form>
         </div>
