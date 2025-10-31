@@ -1,17 +1,12 @@
 <?php
-// === KONFIGURASI SUPABASE ===
-$host = "db.uudchlikynbrhchuisar.supabase.co";
-$port = "5432";
-$database = "postgres";
-$user = "postgres";
-$password = "Notenvy311";
+$host = "localhost";
+$username = "root";
+$password = "";
+$database = "sekolah";
 
-// === KONEKSI MENGGUNAKAN pg_connect ===
-$conn = pg_connect("host=$host port=$port dbname=$database user=$user password=$password");
+$conn = mysqli_connect($host, $username, $password, $database);
 
 if (!$conn) {
-    die("❌ Koneksi ke database Supabase gagal: " . pg_last_error());
-} else {
-    // echo "✅ Koneksi berhasil ke Supabase PostgreSQL!";
+    die("Koneksi gagal: " . mysqli_connect_error());
 }
 ?>
