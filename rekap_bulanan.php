@@ -3,27 +3,27 @@ include("config.php");
 session_start();
 
 // 🔒 Proteksi agar hanya admin login yang bisa akses
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+if (!isset($_SESSION['login_user']) || !isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     header("Location: login.php");
     exit();
 }
 
-// ✅ Query aman menggunakan agregasi PostgreSQL
+// ✅ Query aman menggunakan alias dan agregasi absensi bulanan
 $query = "
     SELECT 
         d.nama AS nama_guru,
-        EXTRACT(MONTH FROM a.waktu_absen) AS bulan,
+        MONTH(a.waktu_absen) AS bulan,
         SUM(CASE WHEN a.status = 'hadir' THEN 1 ELSE 0 END) AS hadir,
         SUM(CASE WHEN a.status = 'tidak hadir' THEN 1 ELSE 0 END) AS tidak_hadir,
         SUM(CASE WHEN a.status = 'sakit' THEN 1 ELSE 0 END) AS sakit,
         SUM(CASE WHEN a.status = 'izin' THEN 1 ELSE 0 END) AS izin
-    FROM absensi a
-    INNER JOIN daftar d ON a.guru_id = d.id
+    FROM absensi AS a
+    INNER JOIN daftar AS d ON a.guru_id = d.id
     GROUP BY d.id, bulan
     ORDER BY d.id ASC, bulan DESC
 ";
 
-$result = pg_query($conn, $query);
+$result = mysqli_query($conn, $query);
 
 // Fungsi ubah angka bulan → nama bulan
 function namaBulan($bulan) {
@@ -32,7 +32,7 @@ function namaBulan($bulan) {
         5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
         9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
     ];
-    return $nama[(int)$bulan] ?? '-';
+    return $nama[$bulan] ?? '-';
 }
 ?>
 
@@ -59,15 +59,15 @@ function namaBulan($bulan) {
 
 <body class="flex bg-gray-50 min-h-screen">
     <!-- Sidebar -->
-    <div class="w-64 bg-white text-gray-800 min-h-screen shadow-lg sidebar">
+    <div class="w-64 bg-cyan-400 text-gray-800 min-h-screen shadow-lg sidebar">
         <div class="p-6">
             <img src="logo.png" alt="SDK Logo" class="w-12 h-12 mb-4">
             <h2 class="text-lg font-semibold mb-6 text-gray-900">SDK FRATERAN 2 KEDIRI</h2>
             <ul class="space-y-1">
-                <li><a href="admin.php" class="block py-3 px-4 text-gray-700 hover:bg-gray-100 rounded-md transition">Dashboard</a></li>
-                <li><a href="rekap_bulanan.php" class="block py-3 px-4 bg-gray-100 text-gray-900 rounded-md font-semibold">Rekap Bulanan</a></li>
-                <li><a href="daftar_guru.php" class="block py-3 px-4 text-gray-700 hover:bg-gray-100 rounded-md transition">Daftar Guru</a></li>
-                <li><a href="logout.php" class="block py-3 px-4 text-gray-700 hover:bg-gray-100 rounded-md transition">Logout</a></li>
+                <li><a href="admin.php" class="block py-3 px-4 bg-cyan-400 hover:bg-cyan-500 text-gray-900 font-medium rounded-lg">Dashboard</a></li>
+                <li><a href="rekap_bulanan.php" class="block py-3 px-4 bg-cyan-400 hover:bg-cyan-500 text-gray-900 font-medium rounded-lg">Rekap Bulanan</a></li>
+                <li><a href="daftar_guru.php" class="block py-3 px-4 bg-cyan-400 hover:bg-cyan-500 text-gray-900 font-medium rounded-lg">Daftar Guru</a></li>
+                <li><a href="logout.php" class="block py-3 px-4 bg-cyan-400 hover:bg-cyan-500 text-gray-900 font-medium rounded-lg">Logout</a></li>
             </ul>
         </div>
     </div>
@@ -79,7 +79,7 @@ function namaBulan($bulan) {
         <!-- Tabel -->
         <div class="bg-white shadow-sm rounded-lg overflow-hidden">
             <table id="tabelRekap" class="w-full text-sm text-gray-700">
-                <thead class="bg-gray-800 text-white">
+                <thead class="bg-cyan-400 text-white">
                     <tr>
                         <th class="px-4 py-3 text-left">Nama Guru</th>
                         <th class="px-4 py-3 text-left">Bulan</th>
@@ -90,11 +90,11 @@ function namaBulan($bulan) {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (pg_num_rows($result) > 0): ?>
-                        <?php while ($row = pg_fetch_assoc($result)): ?>
+                    <?php if (mysqli_num_rows($result) > 0): ?>
+                        <?php while ($row = mysqli_fetch_assoc($result)): ?>
                             <tr class="border-b border-gray-200 hover:bg-gray-50">
                                 <td class="px-4 py-3"><?= htmlspecialchars($row['nama_guru']) ?></td>
-                                <td class="px-4 py-3"><?= namaBulan($row['bulan']) ?></td>
+                                <td class="px-4 py-3"><?= namaBulan((int)$row['bulan']) ?></td>
                                 <td class="px-4 py-3 text-center"><?= htmlspecialchars($row['hadir']) ?></td>
                                 <td class="px-4 py-3 text-center"><?= htmlspecialchars($row['tidak_hadir']) ?></td>
                                 <td class="px-4 py-3 text-center"><?= htmlspecialchars($row['sakit']) ?></td>
@@ -113,13 +113,13 @@ function namaBulan($bulan) {
         <!-- Tombol Print & Export -->
         <div class="flex gap-3 mt-6">
             <button onclick="window.print();" 
-                class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition">
-                🖨️ Print
+                class="bg-cyan-400 hover:bg-cyan-600 text-white px-4 py-2 rounded-md transition">
+                Print
             </button>
 
             <button onclick="exportExcel();" 
-                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition">
-                📤 Export Excel
+                class="bg-cyan-400 hover:bg-cyan-600 text-white px-4 py-2 rounded-md transition">
+                Export Excel
             </button>
         </div>
     </div>
